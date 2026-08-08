@@ -129,6 +129,11 @@ fn satisfies(model: &Model, player: usize, state: [i32; 3],
         Formula::K(j, f) => {
             // determine relevant level based on perspective switch
             let relevant_level = if *j == player {t_level as i32} else {t_level as i32 -1};
+            // dropping below level 0 means there is no perspective left to reason from,
+            // so there is nothing to falsify the K claim.
+            if relevant_level < 0 {
+                return true;
+            }
             // 1. all states that j can't distinguish from the current state
             let cd: Vec<[i32; 3]> = get_accessible(*j, state, &model.states);
             // 2. For each of those states, check if (j, relevant_level) is in T[t]
@@ -225,7 +230,7 @@ fn update_model(model: &Model, announcement: &Formula) -> Model {
 }
 
 fn game_loop(true_state: [i32; 3], tom_level: usize) {
-    let model = initialize_model();
+    let mut model = initialize_model();
     let mut current_player = 0;
 
     loop {
@@ -256,7 +261,7 @@ fn game_loop(true_state: [i32; 3], tom_level: usize) {
                 )),
                 );
                 // update the model with ANN
-                let mut model = update_model(&model, &announcement);
+                model = update_model(&model, &announcement);
             }
         }
         if model.T == T_before {
