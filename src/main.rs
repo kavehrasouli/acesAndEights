@@ -148,6 +148,10 @@ fn satisfies(model: &Model, player: usize, state: [i32; 3],
             return true;
         },
         Formula::Ann(f1, f2) => { // handle announcement
+            // [f1]f2 is vacuously true when f1 is false from this perspective
+            if !satisfies(model, player, state, t_level, f1) {
+                return true;
+            }
             // the complete new ToM map for all state
             let mut new_T: HashMap<[i32; 3], HashSet<(usize, i32)>> = HashMap::new();
 
@@ -276,4 +280,23 @@ fn main() {
     let true_state = [2, 0, 0];
     let tom_level = 2;
     game_loop(true_state, tom_level);
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    // [f]g is vacuously true when f is false from the perspective it is read from.
+    // "player 0 has AA and does not have AA" is false everywhere, so announcing it
+    // and then asking the same contradiction must come out true.
+    #[test]
+    fn announcing_a_falsehood_is_vacuous() {
+        let model = initialize_model();
+        let falsehood = || Formula::AND(
+            Box::new(Formula::P("p0_2".to_string())),
+            Box::new(Formula::NEG(Box::new(Formula::P("p0_2".to_string())))),
+        );
+        let f = Formula::Ann(Box::new(falsehood()), Box::new(falsehood()));
+        assert!(satisfies(&model, 0, [2, 0, 0], 0, &f));
+    }
 }
